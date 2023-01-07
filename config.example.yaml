@@ -1,0 +1,113 @@
+###############################################
+# Example of config YAML file with a couple of
+# queries and connections
+#
+# Use this file to make your own config.yaml
+# file in this directory
+#
+# By default, this application looks for a
+# single file named config.yaml in root
+# directory for both the connection and
+# query lists. This can be changed using the
+# variables DB2DEXPO_CONNECTIONS_FILE and
+# DB2DEXPO_QUERIES_FILE
+###############################################
+
+###############################################
+# Queries
+###############################################
+
+queries:
+  - name: "Lockwaits"
+    runs_on: ["production"] # Query runs (and thus corresponding metrics are generated) only on connections with "production" tag
+    time_interval: 10 # Will run this query every 10 seconds
+    query: |
+      select
+        count(*) count,
+        coalesce(max(LOCK_WAIT_ELAPSED_TIME), 0) max_time
+      from
+        SYSIBMADM.MON_LOCKWAITS
+    gauges:
+      - name: "db2_lockwaits_count"
+        desc: "Amount of lockwaits"
+        col: 1 # First column of query result will be for this metric
+        # No extra_labels, only first row in result will be considered
+
+      - name: "db2_lockwaits_maxwait_seconds"
+        desc: "Maximum number of seconds apps are waiting to get lock"
+        col: 2 # Second column of query result will be for this metric
+        extra_labels:
+          # No special $<COL> in extra_labels, only first row in result will be considered
+          time: "seconds" # This gauge also will have this as an extra fixed label
+
+  - name: "Applications count"
+    runs_on: [] # Query runs on every connection
+    time_interval: 15
+    query: |
+      SELECT
+      count(*) as count,
+      workload_occurrence_state,
+      application_name
+      FROM TABLE(MON_GET_CONNECTION(cast(NULL as bigint), -1))
+      WHERE NOT REGEXP_LIKE(application_name, '^[0-9\.].*')
+      AND application_name <> 'DB2DEXPO'
+      GROUP BY application_name, workload_occurrence_state
+      UNION
+      SELECT
+      count(*) as count,
+      workload_occurrence_state,
+      'FEDERATION' as application_name
+      FROM TABLE(MON_GET_CONNECTION(cast(NULL as bigint), -1))
+      WHERE REGEXP_LIKE(application_name, '^[0-9\.].*')
+      GROUP BY workload_occurrence_state
+    gauges:
+      - name: "db2_applications_count"
+        desc: "Amount of applications connected per state"
+        col: 1 # First column of query result will be for this metric
+
+        extra_labels:
+          # Since there is at least one "$<COL>" special label, every row in result will be considered
+          appstate: "$2" # Second column of query result will be set as this label's value
+          appname: "$3" # Third column of query result will be set as this label's value
+
+###############################################
+# Connections
+###############################################
+connections:
+  - db_host: "production-hostname.private.dns"
+    db_name: "PRODDB1"
+    db_port: 50000
+    db_user_var: DB2_USER_PROD # Now a shell variable with this name should also be set
+    db_passwd_var: DB2_PASSWD_PROD # Now a shell variable with this name should also be set
+    tags: [production, proddb1]
+    extra_labels:
+      dbinstance: db2inst1
+      dbenv: production
+
+  - db_host: "production-hostname.private.dns"
+    db_name: "PRODDB2"
+    db_port: 50010
+    db_user_var: DB2_USER_PROD # Will use the same variable for user as above
+    db_passwd_var: DB2_PASSWD_PROD2 # Now a shell variable with this name should also be set
+    tags: [production, proddb2]
+    extra_labels:
+      dbinstance: db2inst2
+      dbenv: production
+
+    # No db_user_var and db_passwd_var are defined, it'll use by default DB2DEXPO_USER and DB2DEXPO_PASSWD variables
+    # No tags list, will run all queries
+  - db_host: "127.0.0.1"
+    db_name: "DEVDB1"
+    db_port: 50000
+    extra_labels:
+      dbinstance: db2inst1
+      dbenv: test
+
+    # No db_user_var and db_passwd_var are defined, it'll use by default DB2DEXPO_USER and DB2DEXPO_PASSWD variables
+  - db_host: "127.0.0.1"
+    db_name: "DEVDB1"
+    db_port: 50000
+    tags: [] # Empty tags list, will run all queries
+    extra_labels:
+      dbinstance: db2inst1
+      dbenv: test

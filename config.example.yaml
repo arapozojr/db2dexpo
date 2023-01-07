@@ -73,6 +73,7 @@ queries:
 ###############################################
 # Connections
 ###############################################
+
 connections:
   - db_host: "production-hostname.private.dns"
     db_name: "PRODDB1"

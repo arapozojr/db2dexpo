@@ -1,10 +1,12 @@
-# db2dexpo
+# Db2DExpo
 
 > Dynamic Prometheus exporter for Db2 in Python
 
-Db2DExpo is Prometheus exporter for Db2, fully configurable (both which metrics to export and which databases to connect) via YAML files. Write your own SQL queries, run them against one or more databases and create gauge metrics for them. You can create metrics for both Db2 level monitoring (e.g. Bufferpool performance, hit ratio, database size, etc.) and your own database applications.
+Db2DExpo is Prometheus exporter for Db2, fully configurable (both which metrics to export and which databases to connect) via YAML files.
 
-For each query, you can define multiple gauge metric, one for each column from the SQL result set. It's also possible to create dynamic labels for the metrics (for instance, setting a label with bufferpool names).
+Write your own SQL queries, run them against one or more databases and create gauge metrics for them. This way, you can create metrics for both Db2 level monitoring (e.g. Bufferpool performance, hit ratio, database size, etc.) and your own database applications.
+
+For each query you can define multiple gauge metrics, one for each column from the SQL result set. It's also possible to create dynamic labels for the metrics (for instance, setting a label with bufferpool names).
 
 Each query for each database is run asynchronously. Time interval between runs is configurable in the YAML.
 
@@ -50,7 +52,9 @@ Run the application:
 python3 app.py
 ```
 
-Set DB2DEXPO_LOG_LEVEL to DEBUG to show query executions and metric updates. Example output of application startup:
+Set DB2DEXPO_LOG_LEVEL to DEBUG to show query executions and metric updates.
+
+Example output of application startup:
 
 ```text
 2023-01-07 10:24:16,858 - db2dexpo.prometheus - INFO - [GAUGE] [db2_applications_count] created
